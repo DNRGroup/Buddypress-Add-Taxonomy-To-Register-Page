@@ -1,0 +1,137 @@
+<?php
+/*
+Plugin Name: Buddypress Add Taxonomy To Register Page
+Plugin URI: https://plus.google.com/u/0/117992064304828379677/posts
+Description: Add Taxonomy To the register page and to the profile page. Provided and setting tab in the backend to add in which feilds.
+Version: 1.0.0
+Author: DNR Groups
+Author URI: https://plus.google.com/u/0/117992064304828379677/posts
+License: GNU/GPL 2
+Text Domain: dnr-groups
+*/
+
+
+
+// Exit if accessed directly
+if ( ! defined( 'ABSPATH' ) ) exit;
+
+
+
+/* Only load code that needs BuddyPress to run once BP is loaded and initialized. */
+function DNR_add_this_if_buddpress_is_loaded() {
+
+	/*
+	* the below action is call when category is add to the feilds
+	*/
+	function DNR_category_edited_form_fields( $term_id, $tt_id ) {
+	   global $wpdb;
+	   $bp_prefix = bp_core_get_table_prefix();
+
+	   $DNR_add_in_feilds_number = get_option( 'DNR_add_in_feilds_number' , 0 );
+
+	   $term = get_term( $tt_id, 'category' );
+	   if ( ! $wpdb->get_var( "SELECT id FROM {$bp_prefix}bp_xprofile_fields WHERE description = $tt_id AND parent_id = $DNR_add_in_feilds_number" ) ) {
+	       $insert_sq = "UPDATE {$bp->profile->table_name_fields} SET name='".$term->name."' WHERE description = $tt_id AND parent_id = $DNR_add_in_feilds_number;";
+	       $wpdb->query( $insert_sq );
+	   }
+	}
+
+
+
+	/*
+	* the below action is call when category is edit the name is changes
+	*/
+	function DNR_category_created_form_fields( $term_id , $tt_id ) {
+		$DNR_add_in_feilds_number = get_option( 'DNR_add_in_feilds_number' , 0 );
+		global $wpdb, $bp;
+		$bp_prefix  = bp_core_get_table_prefix();
+
+		$term = get_term( $tt_id, 'category' );
+		if ( ! $wpdb->get_var( "SELECT id FROM {$bp_prefix}bp_xprofile_fields WHERE description = $tt_id AND parent_id = $DNR_add_in_feilds_number" ) ) {
+		   $insert_sq = "INSERT INTO {$bp->profile->table_name_fields} ( group_id, parent_id, type, name, description, option_order ,is_required, can_delete ) VALUES ( 1 , $DNR_add_in_feilds_number , 'option' , '".$term->name."' , $tt_id , $tt_id , false , 1 );";
+
+		   $wpdb->query( $insert_sq );
+		}
+	}
+
+
+
+	/*
+	* the below action is call when category is deletec
+	*/
+	function DNR_category_delete_form_fields( $term_id, $tt_id ) {
+		$DNR_add_in_feilds_number = get_option( 'DNR_add_in_feilds_number' , 0 );
+	   	global $wpdb, $bp;
+	   	$wpdb->query( $wpdb->prepare( "DELETE FROM {$bp->profile->table_name_fields} WHERE description = %d AND parent_id = %d", $tt_id , $DNR_add_in_feilds_number ) );
+	}
+
+
+	if(  !empty( get_option( 'DNR_add_in_feilds_number' , 0 ) ) ){
+		add_action('created_category', 'DNR_category_created_form_fields', 10, 2);
+		add_action('edited_category', 'DNR_category_edited_form_fields', 10, 2);
+		add_action('delete_category', 'DNR_category_delete_form_fields', 10 , 2);
+	}
+	
+}
+add_action( 'bp_include', 'DNR_add_this_if_buddpress_is_loaded' );
+
+
+add_action( 'admin_menu', 'DNR_add_menu_action_callback' );
+
+
+
+function DNR_add_menu_action_callback() { 
+	add_options_page('BP add Taxonomy', 'BP add Taxonomy', 'manage_options', 'BP-add-Taxonomy', 'DNR_function_to_Shoe_html_And_Save_value');
+}
+
+
+function DNR_function_to_Shoe_html_And_Save_value() { 
+
+	/*
+	* this is used to save the calue in the option table
+	*/
+	DNR_function_to_Save_html();
+
+
+	/*
+	this is used to add html 
+	*/
+	DNR_function_to_Show_html();
+}
+
+
+function DNR_function_to_Show_html(){ ?>
+	<div class="dnr_main_setting_for_Tax">
+		<form method="post" action="">
+			<ul class="main_menu_setting">
+				<!-- <li class="single_menu_save">
+					<input type="text" class="DNR_add_in_group_number" name="DNR_add_in_group_number" placeholder="By Default is group" value="<?php //echo get_option( 'DNR_add_in_group_number' , 1 ); ?>">
+					<label>By Default is group is set to 1</label>
+				</li> -->
+
+				<li class="single_menu_save">
+					<input type="text" class="feilds_id_to_set" name="DNR_add_in_feilds_number" placeholder="By Default is set to null" value="<?php echo get_option( 'DNR_add_in_feilds_number' , 0 ); ?>">
+					<label>By Default it is not being add</label>
+				</li>
+
+				<li class="single_menu_save">
+					<input type="submit" class="submit" name="submit" value="submit">
+				</li>
+			</ul>
+	</form>
+	</div><?php
+}
+
+
+function DNR_function_to_Save_html(){
+	if( isset( $_POST['submit'] )  && !empty( $_POST['submit'] )  ){
+		
+		// if( isset( $_POST['DNR_add_in_group_number'] ) ){
+		// 	update_option( 'DNR_add_in_group_number' , $_POST['DNR_add_in_group_number'] );
+		// }
+
+		if( isset( $_POST['DNR_add_in_feilds_number'] ) ){
+			update_option( 'DNR_add_in_feilds_number' , $_POST['DNR_add_in_feilds_number'] );
+		}
+	}
+}
